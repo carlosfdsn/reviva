@@ -1,0 +1,13 @@
+{
+  "routes": [
+    { "path": "/", "title": "Início" },
+    { "path": "/pontos-de-coleta", "title": "Pontos de Coleta" },
+    { "path": "/guia-de-reciclagem", "title": "Guia de Reciclagem" },
+    { "path": "/tutoriais-upcycling", "title": "Tutoriais Upcycling" },
+    { "path": "/comunidade", "title": "Comunidade" },
+    { "path": "/cadastro", "title": "Criar conta" },
+    { "path": "/perfil", "title": "Meu Perfil" },
+    { "path": "/trocar-conta", "title": "Trocar conta" },
+    { "path": "/tutorial/:slug", "title": "Tutorial Upcycling" }
+  ]
+}
