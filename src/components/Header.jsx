@@ -2,13 +2,12 @@ import { useEffect, useState } from "react";
 import { navItems } from "../data/content.js";
 import { Link } from "../lib/router.jsx";
 import { useTheme } from "../lib/theme.jsx";
-import { Icon } from "./ui.jsx";
+import { ASSET, Icon } from "./ui.jsx";
 
 export function Logo({ light = false }) {
   return (
     <Link to="/" className={`logo ${light ? "logo-light" : ""}`} aria-label="REVIVA — ir para o início">
-      <span className="logo-mark">R</span>
-      <span>REVIVA</span>
+      <img className="logo-img" src={ASSET("logo-reviva.webp")} alt="ReViva — dar nova vida ao que importa" />
     </Link>
   );
 }
