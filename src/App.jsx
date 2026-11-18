@@ -5,6 +5,7 @@ import { ThemeProvider } from "./lib/theme.jsx";
 import { ToastProvider } from "./components/ui.jsx";
 import Header from "./components/Header.jsx";
 import Footer from "./components/Footer.jsx";
+import TabBar from "./components/TabBar.jsx";
 import HomePage from "./pages/Home.jsx";
 import TutorialsPage from "./pages/Tutorials.jsx";
 import TutorialPage from "./pages/Tutorial.jsx";
@@ -53,6 +54,7 @@ function Shell() {
         {renderRoute(path, search)}
       </main>
       <Footer />
+      <TabBar path={path} />
     </>
   );
 }

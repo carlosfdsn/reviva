@@ -211,6 +211,10 @@ em {
 }
 
 /* ---------- 3. Botões e utilidades ---------- */
+.header-cta {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 .header-cta,
 .primary-button {
   background: var(--brand);
@@ -453,6 +457,23 @@ em {
 .logo:hover .logo-mark {
   transform: rotate(-14deg) scale(1.08);
 }
+.logo {
+  flex-shrink: 0;
+}
+.logo-img {
+  display: block;
+  height: 44px;
+  width: auto;
+  transition:
+    transform 0.5s var(--ease),
+    height 0.3s var(--ease);
+}
+.is-scrolled .logo-img {
+  height: 30px;
+}
+.logo:hover .logo-img {
+  transform: scale(1.04);
+}
 .logo-light {
   color: var(--band-text);
 }
@@ -463,7 +484,7 @@ em {
 .desktop-nav {
   display: flex;
   align-items: center;
-  gap: 26px;
+  gap: 20px;
   margin-left: auto;
 }
 .nav-link {
@@ -2667,7 +2688,7 @@ em {
 }
 
 /* ---------- 10. Responsivo ---------- */
-@media (max-width: 1180px) {
+@media (max-width: 1360px) {
   .menu-toggle {
     display: grid;
   }

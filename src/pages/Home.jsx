@@ -7,7 +7,7 @@ const count = (list) => tutorials.filter((t) => list.includes(t.material)).lengt
 
 export default function HomePage() {
   usePageTitle("REVIVA — Reciclagem Circular");
-  const marquee = [...materials, "Vidro", ...materials, "Vidro"];
+  const marquee = [...materials, "Vidro"];
 
   return (
     <>
@@ -42,7 +42,7 @@ export default function HomePage() {
           <span className="orb orb-a" aria-hidden="true" />
           <span className="orb orb-b" aria-hidden="true" />
           <div className="hero-visual-card">
-            <img src={ASSET("8-36.webp")} alt="ReViva — dar nova vida ao que importa" />
+            <img src={ASSET("51-10732.webp")} alt="Cesto feito com tiras de jornal enroladas, cheio de carretéis de linha, sobre uma mesa de madeira" />
             <div className="hero-note">
               <Icon name="leaf" size={18} />
               <span>
@@ -119,7 +119,7 @@ export default function HomePage() {
           {Object.entries(materialGroups).map(([key, group], i) => (
             <Reveal key={key} delay={i * 100}>
               <Link to={`/tutoriais-upcycling?grupo=${key}`} className="material-link">
-                <span className="material-icon">{i === 0 ? "▱" : "◌"}</span>
+                <span className="material-icon"><Icon name={i === 0 ? "doc" : "cube"} size={19} /></span>
                 <span>
                   <b>{group.label}</b>
                   <small>{count(group.materials)} tutoriais</small>
