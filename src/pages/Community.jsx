@@ -7,6 +7,33 @@ import { ASSET, Icon, Reveal, SectionKicker, useToast } from "../components/ui.j
 
 const SEED_AVATARS = { "seed-1": "8-973.webp", "seed-2": "8-992.webp" };
 const FILTERS = ["Todos", ...postTags];
+const COMMENTS_KEY = "reviva-comments";
+
+const H = 3600 * 1000;
+const now = Date.now();
+
+// Comentários de exemplo (só aparecem enquanto o usuário não mexer em nenhum).
+const SEED_COMMENTS = {
+  "seed-1": [
+    { id: "c-s1-1", author: "Marina Silva", handle: "@marinasilva", avatar: "8-1010.webp", text: "Ficou lindo demais! Qual grana de lixa você usou no acabamento?", createdAt: now - 5 * H },
+    { id: "c-s1-2", author: "Felipe Neto", handle: "@felipeneto", avatar: "8-992.webp", text: "Vou tentar com as garrafas aqui de casa 🙌", createdAt: now - 3 * H },
+    { id: "c-s1-3", author: "Ana Beatriz", handle: "@anabeatriz", avatar: "8-957.webp", text: "Salvei o tutorial, obrigada por compartilhar!", createdAt: now - 1 * H },
+  ],
+  "seed-2": [
+    { id: "c-s2-1", author: "Carlos Eduardo", handle: "@carloseduardo", avatar: "8-973.webp", text: "Parabéns pela iniciativa, 50kg é bastante coisa!", createdAt: now - 8 * H },
+    { id: "c-s2-2", author: "Marina Silva", handle: "@marinasilva", avatar: "8-1010.webp", text: "A próxima coleta vai ser quando? Quero ajudar.", createdAt: now - 2 * H },
+    { id: "c-s2-3", author: "Ana Beatriz", handle: "@anabeatriz", avatar: "8-957.webp", text: "Muito bom ver a comunidade se mobilizando 🌱", createdAt: now - 40 * 60 * 1000 },
+  ],
+};
+
+function ago(ts) {
+  if (!ts) return "";
+  const s = Math.max(0, (Date.now() - ts) / 1000);
+  if (s < 60) return "agora";
+  if (s < 3600) return `${Math.floor(s / 60)} min`;
+  if (s < 86400) return `${Math.floor(s / 3600)} h`;
+  return `${Math.floor(s / 86400)} d`;
+}
 
 export default function CommunityPage() {
   usePageTitle("Comunidade · REVIVA");
@@ -14,6 +41,7 @@ export default function CommunityPage() {
   const [member] = useState(() => read(KEYS.member, null));
   const [posts, setPosts] = useState(() => read(KEYS.posts, seedPosts));
   const [saved, setSaved] = useState(() => read(KEYS.saved, []));
+  const [comments, setComments] = useState(() => read(COMMENTS_KEY, SEED_COMMENTS));
   const [draft, setDraft] = useState("");
   const [tag, setTag] = useState(postTags[0]);
   const [photo, setPhoto] = useState(null);
@@ -21,12 +49,19 @@ export default function CommunityPage() {
   const [query, setQuery] = useState("");
   const [notice, setNotice] = useState("");
 
-  // edição / exclusão
+  // posts: edição / exclusão
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState("");
   const [confirmId, setConfirmId] = useState(null);
 
-  const isOwner = (post) => !!member && post.handle === member.handle;
+  // comentários
+  const [openId, setOpenId] = useState(null); // post com comentários abertos
+  const [commentDraft, setCommentDraft] = useState("");
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editCommentText, setEditCommentText] = useState("");
+  const [confirmCommentId, setConfirmCommentId] = useState(null);
+
+  const isOwner = (item) => !!member && item.handle === member.handle;
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -40,6 +75,11 @@ export default function CommunityPage() {
   const updatePosts = (next) => {
     setPosts(next);
     if (!write(KEYS.posts, next)) setNotice("Seu navegador está sem espaço: a publicação não ficará salva após recarregar.");
+  };
+
+  const updateComments = (next) => {
+    setComments(next);
+    if (!write(COMMENTS_KEY, next)) setNotice("Seu navegador está sem espaço: o comentário não ficará salvo após recarregar.");
   };
 
   const selectPhoto = async (event) => {
@@ -66,7 +106,6 @@ export default function CommunityPage() {
       image: photo?.data || null,
       createdAt: Date.now(),
       likes: 0,
-      comments: 0,
       liked: false,
     };
     updatePosts([post, ...posts]);
@@ -77,6 +116,7 @@ export default function CommunityPage() {
     setNotice("Publicado! Sua ideia já está no mural da comunidade.");
   };
 
+  /* ---------- posts: editar / excluir ---------- */
   const startEdit = (post) => {
     setConfirmId(null);
     setEditingId(post.id);
@@ -92,11 +132,7 @@ export default function CommunityPage() {
     if (!isOwner(post)) return;
     const text = editText.trim();
     if (!text && !post.image) return setNotice("O texto não pode ficar vazio.");
-    updatePosts(
-      posts.map((p) =>
-        p.id === post.id ? { ...p, text: text || p.text, editedAt: Date.now() } : p,
-      ),
-    );
+    updatePosts(posts.map((p) => (p.id === post.id ? { ...p, text: text || p.text, editedAt: Date.now() } : p)));
     cancelEdit();
     toast("Publicação atualizada.");
   };
@@ -104,15 +140,68 @@ export default function CommunityPage() {
   const deletePost = (post) => {
     if (!isOwner(post)) return;
     updatePosts(posts.filter((p) => p.id !== post.id));
-    // remove também dos salvos, pra não sobrar id órfão
     if (saved.includes(post.id)) {
       const nextSaved = saved.filter((s) => s !== post.id);
       setSaved(nextSaved);
       write(KEYS.saved, nextSaved);
     }
+    // apaga os comentários do post junto
+    if (comments[post.id]) {
+      const { [post.id]: _removed, ...rest } = comments;
+      updateComments(rest);
+    }
     setConfirmId(null);
     if (editingId === post.id) cancelEdit();
+    if (openId === post.id) setOpenId(null);
     toast("Publicação excluída.");
+  };
+
+  /* ---------- comentários ---------- */
+  const toggleComments = (postId) => {
+    setOpenId((cur) => (cur === postId ? null : postId));
+    setCommentDraft("");
+    setEditingCommentId(null);
+    setConfirmCommentId(null);
+  };
+
+  const addComment = (postId) => {
+    if (!member) return navigate("/cadastro");
+    const text = commentDraft.trim();
+    if (!text) return;
+    const comment = {
+      id: `c-${Date.now()}`,
+      author: member.name,
+      handle: member.handle,
+      text,
+      createdAt: Date.now(),
+    };
+    updateComments({ ...comments, [postId]: [...(comments[postId] || []), comment] });
+    setCommentDraft("");
+  };
+
+  const startEditComment = (c) => {
+    setConfirmCommentId(null);
+    setEditingCommentId(c.id);
+    setEditCommentText(c.text);
+  };
+
+  const saveComment = (postId, c) => {
+    if (!isOwner(c)) return;
+    const text = editCommentText.trim();
+    if (!text) return;
+    updateComments({
+      ...comments,
+      [postId]: comments[postId].map((x) => (x.id === c.id ? { ...x, text, editedAt: Date.now() } : x)),
+    });
+    setEditingCommentId(null);
+    setEditCommentText("");
+  };
+
+  const deleteComment = (postId, c) => {
+    if (!isOwner(c)) return;
+    updateComments({ ...comments, [postId]: comments[postId].filter((x) => x.id !== c.id) });
+    setConfirmCommentId(null);
+    toast("Comentário excluído.");
   };
 
   const toggleLike = (id) =>
@@ -174,6 +263,8 @@ export default function CommunityPage() {
           {visible.map((post, i) => {
             const owner = isOwner(post);
             const editing = editingId === post.id;
+            const list = comments[post.id] || [];
+            const open = openId === post.id;
             return (
               <Reveal as="article" delay={(i % 2) * 70} className="social-post" key={post.id}>
                 <div className="post-header">
@@ -193,13 +284,7 @@ export default function CommunityPage() {
 
                 {editing ? (
                   <div className="post-edit">
-                    <textarea
-                      value={editText}
-                      onChange={(e) => setEditText(e.target.value)}
-                      rows={3}
-                      autoFocus
-                      aria-label="Editar publicação"
-                    />
+                    <textarea value={editText} onChange={(e) => setEditText(e.target.value)} rows={3} autoFocus aria-label="Editar publicação" />
                     <div className="post-edit-actions">
                       <button type="button" className="outline-button" onClick={cancelEdit}>Cancelar</button>
                       <button type="button" className="primary-button" onClick={() => saveEdit(post)}>Salvar</button>
@@ -217,8 +302,8 @@ export default function CommunityPage() {
                   <button type="button" className={`post-action ${post.liked ? "liked" : ""}`} onClick={() => toggleLike(post.id)} aria-pressed={post.liked}>
                     <Icon name="heart" size={18} /> {post.likes} Curtidas
                   </button>
-                  <button type="button" className="post-action" onClick={() => toast("Comentários serão liberados nesta publicação em breve.")}>
-                    <Icon name="comment" size={18} /> {post.comments} Comentários
+                  <button type="button" className={`post-action ${open ? "liked" : ""}`} onClick={() => toggleComments(post.id)} aria-expanded={open}>
+                    <Icon name="comment" size={18} /> {list.length} Comentários
                   </button>
                   <button type="button" className={`post-action save-action ${saved.includes(post.id) ? "saved" : ""}`} onClick={() => toggleSave(post.id)} aria-pressed={saved.includes(post.id)}>
                     <Icon name="bookmark" size={17} /> {saved.includes(post.id) ? "Salvo" : "Salvar"}
@@ -240,6 +325,80 @@ export default function CommunityPage() {
                     </span>
                   )}
                 </div>
+
+                {open && (
+                  <div className="comments">
+                    {list.length === 0 && <p className="comments-empty">Ainda sem comentários. Seja a primeira pessoa a comentar!</p>}
+
+                    {list.map((c) => {
+                      const mine = isOwner(c);
+                      const editingC = editingCommentId === c.id;
+                      return (
+                        <div className="comment" key={c.id}>
+                          <img src={ASSET(c.avatar || "8-1326.webp")} alt="" />
+                          <div className="comment-body">
+                            <div className="comment-head">
+                              <b>{c.author}</b>
+                              <small>{c.handle} • {ago(c.createdAt)}{c.editedAt ? " • editado" : ""}</small>
+                            </div>
+
+                            {editingC ? (
+                              <div className="comment-edit">
+                                <textarea value={editCommentText} onChange={(e) => setEditCommentText(e.target.value)} rows={2} autoFocus aria-label="Editar comentário" />
+                                <div className="post-edit-actions">
+                                  <button type="button" className="outline-button" onClick={() => setEditingCommentId(null)}>Cancelar</button>
+                                  <button type="button" className="primary-button" onClick={() => saveComment(post.id, c)}>Salvar</button>
+                                </div>
+                              </div>
+                            ) : (
+                              <p>{c.text}</p>
+                            )}
+
+                            {mine && !editingC && (
+                              <div className="comment-actions">
+                                {confirmCommentId === c.id ? (
+                                  <>
+                                    <button type="button" className="danger" onClick={() => deleteComment(post.id, c)}>Confirmar exclusão</button>
+                                    <button type="button" onClick={() => setConfirmCommentId(null)}>Cancelar</button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button type="button" onClick={() => startEditComment(c)}>Editar</button>
+                                    <button type="button" className="danger" onClick={() => setConfirmCommentId(c.id)}>Excluir</button>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {member ? (
+                      <div className="comment-form">
+                        <img src={ASSET("8-1326.webp")} alt="" />
+                        <textarea
+                          value={commentDraft}
+                          onChange={(e) => setCommentDraft(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault();
+                              addComment(post.id);
+                            }
+                          }}
+                          rows={1}
+                          placeholder="Escreva um comentário..."
+                          aria-label="Escreva um comentário"
+                        />
+                        <button type="button" className="primary-button" onClick={() => addComment(post.id)} disabled={!commentDraft.trim()}>Enviar</button>
+                      </div>
+                    ) : (
+                      <button type="button" className="outline-button comment-login" onClick={() => navigate("/cadastro")}>
+                        Crie uma conta para comentar
+                      </button>
+                    )}
+                  </div>
+                )}
               </Reveal>
             );
           })}

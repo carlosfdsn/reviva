@@ -2980,17 +2980,13 @@ em {
   }
 }
 
-.post-owner-actions {
-  margin-left: auto;
-  display: flex;
-  gap: 4px;
-}
+/* ---- ações do dono / edição de post ---- */
+.post-owner-actions { margin-left: auto; display: flex; gap: 4px; }
+.post-action.danger,
+.comment-actions .danger { color: var(--error-text); }
 
-.post-action.danger {
-  color: var(--error-text);
-}
-
-.post-edit textarea {
+.post-edit textarea,
+.comment-edit textarea {
   width: 100%;
   padding: 12px 14px;
   border: 1px solid var(--line);
@@ -3000,15 +2996,59 @@ em {
   font: inherit;
   resize: vertical;
 }
+.post-edit textarea:focus-visible,
+.comment-edit textarea:focus-visible,
+.comment-form textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.post-edit-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
 
-.post-edit textarea:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+/* ---- comentários ---- */
+.comments {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 14px;
 }
+.comments-empty { margin: 0; color: var(--muted); font-size: 0.92rem; }
 
-.post-edit-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 10px;
+.comment { display: flex; gap: 10px; align-items: flex-start; }
+.comment > img,
+.comment-form > img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex: none; }
+.comment-body {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-soft);
+  border-radius: 14px;
+  padding: 10px 14px;
 }
+.comment-head { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+.comment-head b { font-size: 0.92rem; }
+.comment-head small { color: var(--muted); font-size: 0.78rem; }
+.comment-body p { margin: 4px 0 0; font-size: 0.95rem; line-height: 1.5; overflow-wrap: anywhere; }
+
+.comment-actions { display: flex; gap: 12px; margin-top: 6px; }
+.comment-actions button {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+.comment-actions button:hover { text-decoration: underline; }
+
+.comment-form { display: flex; gap: 10px; align-items: flex-end; }
+.comment-form textarea {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  resize: none;
+}
+.comment-form .primary-button:disabled { opacity: 0.5; cursor: not-allowed; }
+.comment-login { justify-self: start; }
