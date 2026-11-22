@@ -21,6 +21,13 @@ export default function CommunityPage() {
   const [query, setQuery] = useState("");
   const [notice, setNotice] = useState("");
 
+  // edição / exclusão
+  const [editingId, setEditingId] = useState(null);
+  const [editText, setEditText] = useState("");
+  const [confirmId, setConfirmId] = useState(null);
+
+  const isOwner = (post) => !!member && post.handle === member.handle;
+
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     return posts.filter(
@@ -68,6 +75,44 @@ export default function CommunityPage() {
     setFilter("Todos");
     setQuery("");
     setNotice("Publicado! Sua ideia já está no mural da comunidade.");
+  };
+
+  const startEdit = (post) => {
+    setConfirmId(null);
+    setEditingId(post.id);
+    setEditText(post.text);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditText("");
+  };
+
+  const saveEdit = (post) => {
+    if (!isOwner(post)) return;
+    const text = editText.trim();
+    if (!text && !post.image) return setNotice("O texto não pode ficar vazio.");
+    updatePosts(
+      posts.map((p) =>
+        p.id === post.id ? { ...p, text: text || p.text, editedAt: Date.now() } : p,
+      ),
+    );
+    cancelEdit();
+    toast("Publicação atualizada.");
+  };
+
+  const deletePost = (post) => {
+    if (!isOwner(post)) return;
+    updatePosts(posts.filter((p) => p.id !== post.id));
+    // remove também dos salvos, pra não sobrar id órfão
+    if (saved.includes(post.id)) {
+      const nextSaved = saved.filter((s) => s !== post.id);
+      setSaved(nextSaved);
+      write(KEYS.saved, nextSaved);
+    }
+    setConfirmId(null);
+    if (editingId === post.id) cancelEdit();
+    toast("Publicação excluída.");
   };
 
   const toggleLike = (id) =>
@@ -126,35 +171,78 @@ export default function CommunityPage() {
             {notice && <div className="inline-notice" role="status" key={notice}>{notice}</div>}
           </Reveal>
 
-          {visible.map((post, i) => (
-            <Reveal as="article" delay={(i % 2) * 70} className="social-post" key={post.id}>
-              <div className="post-header">
-                <div className="post-author">
-                  <img src={ASSET(post.avatar || SEED_AVATARS[post.id] || "8-1326.webp")} alt="" />
-                  <span>
-                    <b>{post.author}</b>
-                    <small>{post.handle} • {post.role}{post.createdAt ? ` • ${timeAgo(post.createdAt)}` : ""}</small>
-                  </span>
+          {visible.map((post, i) => {
+            const owner = isOwner(post);
+            const editing = editingId === post.id;
+            return (
+              <Reveal as="article" delay={(i % 2) * 70} className="social-post" key={post.id}>
+                <div className="post-header">
+                  <div className="post-author">
+                    <img src={ASSET(post.avatar || SEED_AVATARS[post.id] || "8-1326.webp")} alt="" />
+                    <span>
+                      <b>{post.author}</b>
+                      <small>
+                        {post.handle} • {post.role}
+                        {post.createdAt ? ` • ${timeAgo(post.createdAt)}` : ""}
+                        {post.editedAt ? " • editado" : ""}
+                      </small>
+                    </span>
+                  </div>
+                  <span className="post-tag">{post.tag}</span>
                 </div>
-                <span className="post-tag">{post.tag}</span>
-              </div>
-              <p className="post-text">{post.text}</p>
-              {post.image && (
-                <img className="post-image" loading="lazy" src={post.image.startsWith("data:") ? post.image : ASSET(post.image)} alt={`Publicação de ${post.author}`} />
-              )}
-              <div className="post-footer">
-                <button type="button" className={`post-action ${post.liked ? "liked" : ""}`} onClick={() => toggleLike(post.id)} aria-pressed={post.liked}>
-                  <Icon name="heart" size={18} /> {post.likes} Curtidas
-                </button>
-                <button type="button" className="post-action" onClick={() => toast("Comentários serão liberados nesta publicação em breve.")}>
-                  <Icon name="comment" size={18} /> {post.comments} Comentários
-                </button>
-                <button type="button" className={`post-action save-action ${saved.includes(post.id) ? "saved" : ""}`} onClick={() => toggleSave(post.id)} aria-pressed={saved.includes(post.id)}>
-                  <Icon name="bookmark" size={17} /> {saved.includes(post.id) ? "Salvo" : "Salvar"}
-                </button>
-              </div>
-            </Reveal>
-          ))}
+
+                {editing ? (
+                  <div className="post-edit">
+                    <textarea
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      rows={3}
+                      autoFocus
+                      aria-label="Editar publicação"
+                    />
+                    <div className="post-edit-actions">
+                      <button type="button" className="outline-button" onClick={cancelEdit}>Cancelar</button>
+                      <button type="button" className="primary-button" onClick={() => saveEdit(post)}>Salvar</button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="post-text">{post.text}</p>
+                )}
+
+                {post.image && (
+                  <img className="post-image" loading="lazy" src={post.image.startsWith("data:") ? post.image : ASSET(post.image)} alt={`Publicação de ${post.author}`} />
+                )}
+
+                <div className="post-footer">
+                  <button type="button" className={`post-action ${post.liked ? "liked" : ""}`} onClick={() => toggleLike(post.id)} aria-pressed={post.liked}>
+                    <Icon name="heart" size={18} /> {post.likes} Curtidas
+                  </button>
+                  <button type="button" className="post-action" onClick={() => toast("Comentários serão liberados nesta publicação em breve.")}>
+                    <Icon name="comment" size={18} /> {post.comments} Comentários
+                  </button>
+                  <button type="button" className={`post-action save-action ${saved.includes(post.id) ? "saved" : ""}`} onClick={() => toggleSave(post.id)} aria-pressed={saved.includes(post.id)}>
+                    <Icon name="bookmark" size={17} /> {saved.includes(post.id) ? "Salvo" : "Salvar"}
+                  </button>
+
+                  {owner && !editing && (
+                    <span className="post-owner-actions">
+                      {confirmId === post.id ? (
+                        <>
+                          <button type="button" className="post-action danger" onClick={() => deletePost(post)}>Confirmar exclusão</button>
+                          <button type="button" className="post-action" onClick={() => setConfirmId(null)}>Cancelar</button>
+                        </>
+                      ) : (
+                        <>
+                          <button type="button" className="post-action" onClick={() => startEdit(post)}>Editar</button>
+                          <button type="button" className="post-action danger" onClick={() => setConfirmId(post.id)}>Excluir</button>
+                        </>
+                      )}
+                    </span>
+                  )}
+                </div>
+              </Reveal>
+            );
+          })}
           {visible.length === 0 && <div className="empty-state">Nenhuma publicação encontrada para esse filtro.</div>}
         </section>
 

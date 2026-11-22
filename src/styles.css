@@ -2979,3 +2979,36 @@ em {
     animation: none;
   }
 }
+
+.post-owner-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+
+.post-action.danger {
+  color: var(--error-text);
+}
+
+.post-edit textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  resize: vertical;
+}
+
+.post-edit textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.post-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
